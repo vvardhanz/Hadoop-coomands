@@ -1,0 +1,36 @@
+To create a user directory and give a accesss on Hornetworks. 
+    - Hadoop
+    - hadoop fs
+    - hadoop fs -ls              —> Lists all the files from hadoop clusters or hdfs.
+    - hadoop fs -ls /            —> Lists all the files from the hadoop hdfs root directory.
+    - hadoop fs -ls /user/       —> Lists all the files from the hadoop hdfs user directory.
+    - hadoop fs -ls -R /user/    -> Lists all the sub directories.
+
+ 1/11/2017
+
+ To create user space.
+ sudo -u hdfs hadoop fs -mkdir /user/root
+ sudo -u hdfs hadoop fs -chown -R root /user/root
+
+ To know the size of a directory
+ du -sh path of directory
+ du -s -h <path of direcoty>   here -s stands for summaries, -h is representation of size.
+
+EX: du -sh /data/crime
+
+ To Copy from local to HDFS
+
+hadoop fs -copyFromLocal <localsource>  <dst>
+
+EX: hadoop  fs -copyFromLocal /data/crime /user/vvardhan/.
+       hadoop fs -ls -R /user/vvardhan/crime
+       hadoop fs -du -s -h /user/vvardhan/crime
+
+To see the block size which hdfs is dividing.
+hdfs fsck /user/vvardhan/crime -files -blocks -locations
+
+ hdfs     -->  its a part of the hdfs command.
+-fsck         --> command to get the block information .
+-files        --> gives the files details.
+-blocks       --> gives the size of the blocks.
+-locations    --> gives the location of the blocks.
