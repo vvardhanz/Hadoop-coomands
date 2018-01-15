@@ -1,0 +1,289 @@
+Exporting Mysql
+
+To connect to the Databases
+
+sqoop list-databases \
+  --connect jdbc:mysql://ms.itversity.com:3306 \
+  --username retail_user \
+  --password itversity
+
+Note: To give a password you have 3 different methods
+
+--password <hardcord password> or -P <it will prompt> or --password-file <path of the password file>
+
+To List the Database tables
+
+sqoop list-tables \
+  --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+  --username retail_user \
+  --password itversity
+
+To Run Queries on a remote databases we can use "EVAL"
+
+ Reading
+
+sqoop eval \
+--connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+  --username retail_user \
+  --password itversity \
+   --query "select * from orders LIMIT 10"
+
+or
+
+sqoop eval \
+--connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+  --username retail_user \
+  --password itversity \
+   --query "select * from order_items LIMIT 10"
+
+Insertion
+sqoop eval \
+--connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+  --username retail_user \
+  --password itversity \
+   --query "INSERT INTO orders VALUES (100000, '2017-10-31 00:00:00.0', 100000, 'DUMMY')"
+
+or
+sqoop eval \
+  --connect jdbc:mysql://ms.itversity.com:3306/retail_export \
+  --username retail_user \
+  --password itversity \
+  --query "CREATE TABLE dummy (i INT)"
+
+
+sqoop eval \
+  --connect jdbc:mysql://ms.itversity.com:3306/retail_export \
+  --username retail_user \
+  --password itversity \
+  --query "INSERT INTO dummy VALUES (1)"
+
+sqoop eval \
+  --connect jdbc:mysql://ms.itversity.com:3306/retail_export \
+  --username retail_user \
+  --password itversity \
+  --query "SELECT * FROM dummy"
+
+
+NOTE:
+Sqoop  help eval
+
+Common arguments:
+
+   --connect <jdbc-uri>                                Specify JDBC connect string
+
+   --connection-manager <class-name>            Specify connection manager class name
+
+   --connection-param-file <properties-file>     Specify connection parameters file
+
+   --driver <class-name>                                  Manually specify JDBC driver class to use
+
+   --hadoop-home <hdir>                                   Override $HADOOP_MAPRED_HOME_ARG
+
+   --hadoop-mapred-home <dir>                            Override $HADOOP_MAPRED_HOME_ARG
+
+   --help                                       Print usage instructions
+
+-P                                              Read password from console
+
+   --password <password>                         Set authentication password
+
+   --password-alias <password-alias>            Credential provider password alias
+
+   --password-file <password-file>              Set authentication password file path
+
+   --relaxed-isolation                          Use read-uncommitted isolation for imports
+
+   --skip-dist-cache                            Skip copying jars to distributed cache
+
+   --temporary-rootdir <rootdir>                 Defines the temporary root directory for the import
+
+   --username <username>                         Set authentication username
+
+   --verbose                                      Print more information while working
+
+
+IMPORTING DATA
+
+Normal Import:
+
+sqoop import \
+  --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+  --username retail_user \
+  --password itversity \
+  --table order_items \
+  --target-dir /user/vvardhan/sqoop_import/retail_db/order_items
+
+or
+
+sqoop import \
+  --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+  --username retail_user \
+  --password itversity \
+  --table order_items \
+ --warehouse-dir /user/vvardhan/sqoop_import/retail_db
+
+or
+
+sqoop import \
+  --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+  --username retail_user \
+  --password itversity \
+  --table order_items \
+ --warehouse-dir /user/vvardhan/sqoop_import/retail_db \
+  --num-mappers 1
+
+or (using append)  This will append to the existing.
+
+sqoop import \
+  --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+  --username retail_user \
+  --password itversity \
+  --table order_items \
+ --warehouse-dir /user/vvardhan/sqoop_import/retail_db \
+  --num-mappers 1 \
+  --append
+
+Split BY: It is used if there is no primary key on the table. You can use any other column if the column exhibits below properties. Things to remember for split-by.
+
+- Column should be indexed.
+- Values in the field should be sparse
+- Also often it should be sequence generated or evenly incremented.
+- It should not have null values.
+
+or (split by) (using numaric)
+sqoop import \
+ --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+ --username retail_user \
+ --password itversity \
+ --table order_items_nopk \
+ --warehouse-dir /user/vvardhan/sqoop_import/retail_db \
+ --split-by order_item_order_id
+
+or (split by) (using string)
+sqoop import \
+ --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+ --username retail_user \
+ --password itversity \
+ --table orders \
+ --warehouse-dir /user/vvardhan/sqoop_import/retail_db \
+ --split-by order_status
+
+
+Autoreset Mapper: This is mostly used in case if you have 10 tables few of them with primary key and others without primary key. You can specify auto-reset mapper to 1, what this will do is it will use only one mapper incase of no primary key and for the rest it will use the default mappers.
+
+sqoop import \
+ --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+ --username retail_user \
+ --password itversity \
+ --table order_items_nopk \
+ --warehouse-dir /user/vvardhan/sqoop_import/retail_db \
+ --autoreset-to-one-mapper
+
+
+FILE FORMATS:
+
+- Test File (default)
+- Sequence file
+- Avro file
+- Parquet file
+
+sqoop import \
+  --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+  --username retail_user \
+  --password itversity \
+  --table order_items \
+  --warehouse-dir /user/vvardhan/sqoop_imports/retail_db \
+  --num-mappers 2 \
+  --as-sequencefile
+
+or
+
+sqoop import \
+  --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+  --username retail_user \
+  --password itversity \
+  --table order_items \
+  --warehouse-dir /user/vvardhan/sqoop_imports/retail_db \
+  --num-mappers 2 \
+  --as-textfile
+
+Compression formats:
+
+-
+
+sqoop import \
+  --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+  --username retail_user \
+  --password itversity \
+  --table order_items \
+  --warehouse-dir /user/vvardhan/sqoop_imports/retail_db \
+  --num-mappers 2 \
+  --as-textfile \
+  --compress
+
+or
+
+sqoop import \
+  --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+  --username retail_user \
+  --password itversity \
+  --table order_items \
+  --warehouse-dir /user/vvardhan/sqoop_imports/retail_db \
+  --num-mappers 2 \
+   --as-textfile \
+  --compress \
+  --compression-codec org.apache.hadoop.io.compress.SnappyCodec
+
+   Note you have to give the fully qualified codec path.
+
+Importing Data (Boundary Query, Columns, Query)
+
+- Boundary Query:
+
+sqoop import \
+  --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+  --username retail_user \
+  --password itversity \
+  --table order_items \
+  --warehouse-dir /user/vvardhan/sqoop_imports/retail_db \
+   --boundary-query 'select min(order_item_id), max(order_item_id) from order_items where order_item_id >= 99999'
+
+or
+
+sqoop import \
+  --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+  --username retail_user \
+  --password itversity \
+  --table order_items \
+  --warehouse-dir /user/vvardhan/sqoop_imports/retail_db \
+   --boundary-query 'select 100000, 172198'
+
+ Note: Table or columns is mutually exclusive with query.
+
+Transformation and filtering  (Columns, Query)
+
+sqoop import \
+  --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+  --username retail_user \
+  --password itversity \
+  --table order_items \
+  --columns order_item_order_id,order_item_id,order_item_subtotal \
+  --warehouse-dir /user/vvardhan/sqoop_imports/retail_db \
+  --num-mappers 2
+
+Query: When using QUERY, you shouldn't use either table nor columns along with it. Its restriction.
+
+sqoop import \
+  --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+  --username retail_user \
+  --password itversity \
+  --num-mappers 2 \
+  --query "select o.*, sum(oi.order_item_subtotal) order_revenue from orders o join order_items oi on o.order_id                       = oi.order_item_order_id and \$CONDITIONS group by  o.order_id, o.order_date,                           o.order_customer_id, o.order_status" \
+  --target-dir /user/vvardhan/sqoop_imports/retail_db/orders_with_revenue \
+  --split-by order_id
+
+NOTE:
+
+- Table and/or columns should be mutually exclusive with query
+- For query split-by is mandatory if num-mappers is greater than 1.
+- Query should have a placeholder \$CONDITIONS (with a backslash acts as escape sequence).
