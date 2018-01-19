@@ -271,7 +271,7 @@ sqoop import \
   --warehouse-dir /user/vvardhan/sqoop_imports/retail_db \
   --num-mappers 2
 
-Query: When using QUERY, you shouldn't use either table nor columns along with it. Its restriction.
+Query: When using QUERY, you shouldn't use either table nor columns along with it. Its a restriction.
 
 sqoop import \
   --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
@@ -287,3 +287,103 @@ NOTE:
 - Table and/or columns should be mutually exclusive with query
 - For query split-by is mandatory if num-mappers is greater than 1.
 - Query should have a placeholder \$CONDITIONS (with a backslash acts as escape sequence).
+
+
+
+DELIMETERS & NULLS :
+
+sqoop import \
+--connect jdbc:mysql://ms.itversity.com:3306/hr_db \
+--username hr_user \
+--password itversity \
+--table employees \
+--warehouse-dir /user/vvardhan/sqoop_imports/hr_db \
+--null-non-string -1 \
+--fields-terminated-by "\t" \
+--lines-terminated-by ":"
+
+or using ascii value
+
+sqoop import \
+--connect jdbc:mysql://ms.itversity.com:3306/hr_db \
+--username hr_user \
+--password itversity \
+--table employees \
+--warehouse-dir /user/vvardhan/sqoop_imports/hr_db \
+--null-non-string -1 \
+--fields-terminated-by "/000" \
+--lines-terminated-by ":"
+
+Incremental Import:
+
+sqoop import \
+ --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+ --username retail_user \
+ --password itversity \
+ --target-dir /user/vvardhan/sqoop_import/retail_db/orders \
+ --num-mappers 2 \
+ --query "select * from orders where \$CONDITIONS and order_date like '2013-%'" \
+ --split-by order_id
+
+USING APPEND:
+ (It will append
+
+sqoop import \
+ --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+ --username retail_user \
+ --password itversity \
+ --target-dir /user/vvardhan/sqoop_import/retail_db/orders \
+ --num-mappers 2 \
+ --query "select * from orders where \$CONDITIONS and order_date like '2014-01%'" \
+ --split-by order_id \
+ --append
+
+USING WHERE: (With table)
+ (It will import the records which satisfies the given where condition.)
+
+sqoop import \
+ --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+ --username retail_user \
+ --password itversity \
+ --target-dir /user/vvardhan/sqoop_import/retail_db/orders \
+ --num-mappers 2 \
+ --table orders \
+ --where "order_date like '2014-02%'" \
+ --split-by order_id \
+ --append
+
+USING CHECK-COLUMN : (It will import all the records from the given date to max value.)
+
+sqoop import \
+ --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+ --username retail_user \
+ --password itversity \
+ --target-dir /user/vvardhan/sqoop_import/retail_db/orders \
+ --num-mappers 2 \
+ --table orders \
+ --check-column order_date \
+ --incremental append \
+ --last-value '2014-02-28'
+
+Sqoop Import ALL-TABLES
+
+sqoop import-all-tables \
+ --connect jdbc:mysql://ms.itversity.com:3306/retail_db \
+ --username retail_user \
+ --password itversity \
+ --warehouse-dir /user/vvardhan/sqoop_import/retail_db \
+ --autoreset-to-one-mapper
+
+SQOOP EXPORT
+
+Simple export: (Basic export)
+
+sqoop export \
+--connect jdbc:mysql://ms.itversity.com:3306/retail_export \
+--username retail_user \
+--password itversity \
+--export-dir /apps/hive/warehouse/vvar_sqoop_import.db/daily_revenue \
+--table daily_revenue \
+--input-fields-terminated-by  "\001"
+
+
