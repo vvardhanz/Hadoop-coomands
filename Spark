@@ -1,0 +1,311 @@
+COMMANDS
+
+Initializing Spark jobs:
+
+spark-shell --master yarn --conf spark.ui.port=12654
+
+or
+
+spark-shell --master yarn \
+ --conf spark.ui.port=12654 \
+ --num-executors 1 \
+ --executor-memory 512m
+
+location  ----> /etc/spark/conf
+hadoop fs -du -s -h /public/retail_db
+
+//Initialize Programmatically
+import org.apache.spark.{SparkConf, SparkContext}
+val conf = new SparkConf().setAppName("Daily Revenue").setMaster("yarn-client")
+val sc = new SparkContext(conf)
+
+sc.getConf.getAll  --> it will give all the properties or configuration.
+sc.getConf.getAll.foreach(println)
+
+//Creating RDD -- Validating files from file system
+hadoop fs -ls /public/retail_db/orders
+hadoop fs -tail /public/retail_db/orders
+
+spark-shell --master yarn \
+ --conf spark.ui.port=12654 \
+ --num-executors 1 \
+ --executor-memory 512m
+
+//If it is on HDFS
+val orders = sc.textFile("/public/retail_db/orders")
+
+//If it is on Local file system
+val productRaw = scala.io.Source.fromFile("/data/retail_db/products/part-00000").getLines
+
+val productRaw = scala.io.Source.fromFile("/data/retail_db/products/part-00000").getLines.toList
+val products = sc.parallelize(productRaw)
+
+products.take(10)
+orders.count
+orders.takeSample(true,100)
+orders.takeSample(true,100).foreach(println)
+orders.collect
+
+Reading Data from Different File formats:
+
+- Data Frame (Distributed collection with structure )
+- APIs provided by SqlContext
+- Supported file formats
+    - orc
+    - json
+    - parquet
+    - avro
+- Previewing the dat
+    - show
+
+SC
+sqlContext
+
+sqlContext.load
+
+def load(path: String): DataFrame
+def load(path: String, source: String): DataFrame
+def load(source: String, options: immutable.Map[String,String]): DataFrame
+def load(source: String, options: java.util.Map[String,String]): DataFrame
+def load(source: String, schema: types.StructType, options: immutable.Map[String,String]): DataFrame
+def load(source: String, schema: types.StructType, options: java.util.Map[String,String]): DataFrame
+
+EX:
+
+sqlContext.load("/public/retail_db_json/orders","json").show
+
+sqlContext.read.
+
+asInstanceOf   format         isInstanceOf   jdbc           json           load           option         options        orc  parquet        schema         table          text           toString
+
+EX:
+
+val ordersDF = sqlContext.read.json("/public/retail_db_json/orders")
+ordersDF.show
+ordersDF.printSchema
+ordersDF.select("order_id","order_date").show
+
+Standard Transformations
+
+- Filtering (horizontal and vertical)
+- String manipulation (scala)
+- Row level transformations
+- Joins
+- Aggregation
+- Sorting
+- Ranking
+- Set Operations
+
+ROW Level Transfermations:
+
+-    String manipulation (Scala)
+-    Row level transfermation
+
+Row level transfermation using MAPs.
+
+val orders = sc.textFile("/public/retail_db/orders")
+val str = orders.first
+//1,2013-07-25 00:00:00.0,11599,CLOSED
+str.split(",")(1).substring(0, 10)
+str.split(",")(1).substring(0, 10).replace("-", "")
+str.split(",")(1).substring(0, 10).replace("-", "").toInt
+
+or
+
+val orderDates = orders.map( (str: String) => { str.split(",")(1).substring(0, 10).replace("-", "").toInt })
+orderDates.take(10).foreach(println)
+
+or
+
+val orderspairedRDD = orders.map(order => {
+    val o = order.split(",")
+   (o(0).toInt, o(1).substring(0, 10).replace("-", "").toInt)
+ })
+orderspairedRDD.take(10).foreach(println)
+
+val orderItems = sc.textFile("/public/retail_db/order_items")
+val orderItemsPairedRDD = orderItems.map(orderItem => {
+   (orderItem.split(",")(1).toInt, orderItem)
+})
+
+orderItemsPairedRDD.take(10)
+orderItemsPairedRDD.take(10).foreach(println)
+
+
+Row level transfermation using FlatMAPs.
+EX: Word count
+
+val l = List("Hello", "How are you doing", "Let us perform the word count", "As part of the word count program", "we will see how many times each word repeat")
+val l_rdd = sc.parallelize(l)
+val l_Map = l_rdd.map( ele => ele.split(" ") )
+val l_flatMap = l_rdd.flatMap( ele => ele.split(" ") )
+val wordCount = l_flatMap.map(word => (word, "")).countByKey
+
+Filtering data
+val orders = sc.textFile("/public/retail_db/orders")
+
+orders.count
+orders.filter(order => order.split(",")(3) == "COMPLETE")
+orders.filter(order => order.split(",")(3) == "COMPLETE").count
+
+//Get all the orders from 2013-09 which are in closed or complete
+orders.map(order =>  order.split(",")(3)).distinct.collect.foreach(println)
+
+val ordersFiltered = orders.filter(order => {
+  | val o = order.split(",")
+  | ( o(3) == "COMPLETE" || o(3) == "CLOSED") && (o(1).contains("2013-09"))
+  | })
+ordersFiltered.take(10).foreach(println)
+ordersFiltered.count
+
+INNER JOIN:
+
+//Joining orders and order_items
+
+val orders = sc.textFile("/public/retail_db/orders/")
+val orderItems = sc.textFile("/public/retail_db/order_items")
+
+val ordersMap = orders.map(order => (order.split(",")(0).toInt, order.split(",")(1).substring(0, 10) ))
+
+val orderItemsMap = orderItems.map(orderItem => {
+    val oi = orderItem.split(",")
+   (oi(1).toInt, oi(4).toFloat)
+})
+
+val ordersJoin = ordersMap.join(orderItemsMap)
+ordersJoin.take(10).foreach(println)
+ordersJoin.count
+
+
+OUTER JOIN :
+
+//Get all the oder items which do not have corresponding entries in order items
+
+val orders = sc.textFile("/public/retail_db/orders/");
+val orderMap = orders.map( order => {
+  (order.split(",")(0).toInt, order)
+})
+orderMap.take(10).foreach(println)
+
+val orderItems = sc.textFile("/public/retail_db/order_items");
+val orderItemsMap = orderItems.map( orderItem => {
+   val oi = orderItem.split(",")
+   (oi(1).toInt, orderItem)
+})
+orderItemsMap.take(10).foreach(println)
+
+LEFT OUTER JOIN:
+val ordersLeftOuterJoin = orderMap.leftOuterJoin(orderItemsMap)
+ordersLeftOuterJoin.take(10).foreach(println)
+
+val ordersLeftOuterJoinFilter = ordersLeftOuterJoin.filter( order => order._2._2 == None)
+val ordersWithNoOrderItem = ordersLeftOuterJoinFilter.map(order => order._2._1)
+ordersWithNoOrderItem.take(10).foreach(println)
+
+RIGHT OUTER JOIN:
+val ordersRightOuterJoin = orderMap.rightOuterJoin(orderItemsMap)
+val ordersWithNoOrderItem = ordersRightOuterJoin.filter( order => order._2._1 == None ).map( order => order._2._2)
+ordersWithNoOrderItem.take(10).foreach(println)
+
+AGGREGATION :
+val orders = sc.textFile(“/public/retail_db/orders”)
+orders.map(order => (order.split(“,”)(3), “”)).countByKey.foreach(pritnln)
+
+
+USING ACTIONS (Reduce, countByKey) :
+val orders = sc.textFile(“/public/retail_db/orders”)
+orders.map(order => (order.split(",")(3), "")).countByKey.foreach(println)
+
+val orderItems = sc.textFile("/public/retail_db/order_items");
+val orderItemsRevenue = orderItems.map(oi => oi.split(",")(4).toFloat)
+
+//SUM of REVENUE
+orderItemsRevenue.reduce((max, revenue) => max + revenue)
+
+//MAX of REVENUE
+orderItemsRevenue.reduce((max, revenue) => {
+  | if(max > revenue ) max else revenue
+  | })
+
+- Performance will be higher if use reduceBykey or aggregateByKey
+
+Understanding Combiners:
+
+groupByKey:
+
+EX:
+
+//Aggregation -groupByKey
+1.(1 to 1000) -sum(1 to 1000) => 1 +2 +3 …..1000
+
+//reduceByKey — aggregateByKey
+2.(1 to 1000) -sum ( sum(1, 250) sum(251, 500) sum(501,750) sum(751, 1000) )
+
+//Average calculation
+val orderItems = sc.textFile("/public/retail_db/order_items");
+val orderItemsMap = orderItems.map(oi => (oi.split(",")(1).toInt, oi.split(",")(4).toFloat))
+orderItemsMap.take(10).foreach(println)
+val orderItemsGBK = orderItemsMap.groupByKey
+orderItemsGBK.take(10).foreach(println)
+
+//Get revenue per order_id
+orderItemsGBK.map(rec => rec._2.toList.sum).take(10).foreach(println)
+orderItemsGBK.map(rec => (rec._1, rec._2.toList.sum)).take(10).foreach(println)
+
+//Get data in descending order by order_item_subtotal for each order_id
+val ordersSortedByRevenue = orderItemsGBK.flatMap(rec => {
+     rec._2.toList.sortBy(o => -o).map(k => (rec._1, k))
+     })
+
+ReduceByKey:
+val orderItems = sc.textFile("/public/retail_db/order_items")
+val orderItemsMap = orderItems.map(oi => (oi.split(",")(1).toInt, oi.split(",")(4).toFloat))
+
+val revenuePerOrderId = orderItemsMap.reduceByKey((total, revenue) => total + revenue)
+
+val minRevenuePerOrderId = orderItemsMap.reduceByKey((min, revenue) => if(min > revenue) revenue else min )
+
+aggregateByKey:
+Aggregation - aggregationByKey
+
+val orderItems = sc.textFile("/public/retail_db/order_items")
+val orderItemsMap = orderItems.map(oi => (oi.split(",")(1).toInt, oi.split(",")(4).toFloat))
+
+//(order_id, order_item_subtotal)
+val revenueAndMaxPerProductId = orderItemsMap.
+   aggregateByKey((0.0f, 0.0f))(
+     (inter, subtotal) => (inter._1 + subtotal, if(subtotal > inter._2) subtotal else inter._2),
+     (total, inter) => (total._1 + inter._1, if(total._2 > inter._2) total._2 else inter._2)
+  )
+
+//(order_id, (order_revenue, max_order_item_subtotal))
+
+//SORTING sortByKey:
+val products = sc.textFile(“/public/retail_db/products”)
+val productsMap = products.
+    map(product => (product.split(“,”)(1).toInt, product))
+val productsSortedByCategoryId = productsMap.sortByKey()
+productsSortedByCategoryId.take(10).foreach(println)
+
+//Next add the price as well
+val productsMap = products.
+    map(product => ( (product.split(“,”)(1).toInt,product.split(“,”)(4).toFloat) , product))
+val productsSortedByCategoryId = productsMap.sortByKey()
+  // this will give  number format exception if we have a null value.
+
+//Use filter to skip null records.
+products.filter(product => product.split(",")(4) == "")
+products.filter(product => product.split(",")(4) == "").collect.foreach(println)
+
+//Sort now by skipping null values
+val productsMap = products.
+  | filter(product => product.split(",")(4) != "").
+  | map(product => ( (product.split(",")(1).toInt,product.split(",")(4).toFloat) , product))
+
+//Sort by descending order.
+val productsMap = products.
+  | filter(product => product.split(",")(4) != "").
+  | map(product => ( (product.split(",")(1).toInt, -product.split(",")(4).toFloat) , product))
+//Just by adding - infant of the price value (but not for string)
+
+
