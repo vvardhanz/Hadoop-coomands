@@ -308,4 +308,38 @@ val productsMap = products.
   | map(product => ( (product.split(",")(1).toInt, -product.split(",")(4).toFloat) , product))
 //Just by adding - infant of the price value (but not for string)
 
+1/31/18
+Using Sort by key with take and takeOrdered
+
+//Ranking — Global (details of top 5 products)
+val products = sc.textFile("/public/retail_db/products");
+val productsMap = products.filter( product => product.split(",")(4) != "").map(product => (product.split(",")(4).toFloat, product))
+val productsMapSortedByPrice = productsMap.sortByKey(false)
+ productsMapSortedByPrice.take(10).foreach(println)
+
+//Using takeOrdered
+val products = sc.textFile("/public/retail_db/products")
+products.filter( product => product.split(",")(4) != "").takeOrdered(10)(Ordering[Float].reverse.on(product => product.split(",")(4).toFloat)).foreach(println)
+
+Fetch top ’N' products with in each product category
+val products = sc.textFile("/public/retail_db/products")
+val productsMap = products.filter(product => product.split(",")(4) != "").map(product => (product.split(",")(1).toInt, product))
+val productGroupedByCategory = productsMap.groupByKey
+
+productGroupedByCategory.take(10).foreach(println)
+
+//Just to get the first category.
+val productIterable = productGroupedByCategory.first._2
+
+productIterable.take(10).foreach(println)
+
+val productPrices = productIterable.map(p => p.split(",")(4).toFloat).toSet
+productPrices.toList.sortBy(p => -p)
+productPrices.toList.sortBy(p => -p).take(5)
+
+def getTopNProducts(productsIterable: Iterable[String], topN: Int): Iterable[String] = {
+     val productPrices = productIterable.map(p => p.split(",")(4).toFloat).toSet
+     val topNprices = productPrices.toList.sortBy(p => -p).take(topN)
+}
+
 
