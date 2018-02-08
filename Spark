@@ -343,3 +343,55 @@ def getTopNProducts(productsIterable: Iterable[String], topN: Int): Iterable[Str
 }
 
 
+//Get all the products in descending order by price
+
+val productsSorted = productIterable.toList.sortBy(product => -product.split(",")(4).toFloat)
+val minOfTopNPrices = topNPrices.min
+val topNPricedProducts = productsSorted.takeWhile(product => product.split(",")(4).toFloat >= minOfTopNPrices)
+
+//So Now function will become
+def getTopNPricedProducts(productsIterable: Iterable[String], topN: Int): Iterable[String] = {
+  val productPrices = productIterable.map(p => p.split(",")(4).toFloat).toSet
+  val topNprices = productPrices.toList.sortBy(p => -p).take(topN)
+
+   val productsSorted = productIterable.toList.sortBy(product => -product.split(",")(4).toFloat)
+  val minOfTopNPrices = topNPrices.min
+
+  val topNPricedProducts = productsSorted.takeWhile(product => product.split(",")(4).toFloat >=           minOfTopNPrices)
+
+  topNPricedProducts
+}
+
+EX:
+  getTopNPricedProducts(productIterable,5).foreach(println)
+
+val top3PricedProductsPerCategory = productGroupedByCategory.flatMap(rec => getTopNPricedProducts(rec._2, 3))
+
+
+//Set Operations
+
+val orders = sc.textFile("/public/retail_db/orders")
+
+//Customers who ordered in 2013-08
+val customers_2013_08 = orders.filter(order => order.split(",")(1).contains("2013-08")).map(order => order.split(",")(2).toInt)
+customers_2013_08.distinct.count
+
+//Customers who ordered in 2013-09
+val customers_2013_08 = orders.filter(order => order.split(",")(1).contains("2013-08")).map(order => order.split(",")(2).toInt)
+customers_2013_08.distinct.count
+
+//Get all the customers who placed orders in 2013 August and 2013 September (both)
+val customers_201308_and_201309 = customers_2013_08.intersection(customers_2013_09)
+Note* Intersect does distinct by default
+
+customers_201308_and_201309.count
+customers_201308_and_201309.distinct.count
+
+//Get all the unique customers who placed orders in 2013 August or 2013 September
+val customers_201308_union_201309 = customers_2013_08.union(customers_2013_09)
+customers_201308_union_201309.count
+customers_201308_union_201309.distinct.count
+
+//Get all the customers who placed order in 2013 August but not in 2013 September
+val customers_201308_union_201309 = customers_2013_08.union(customers_2013_09)
+
