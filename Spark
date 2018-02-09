@@ -395,3 +395,63 @@ customers_201308_union_201309.distinct.count
 //Get all the customers who placed order in 2013 August but not in 2013 September
 val customers_201308_union_201309 = customers_2013_08.union(customers_2013_09)
 
+//Saving Data as Text Format and also using compressions
+val orders = sc.textFile("/public/retail_db/orders")
+val orderCountByStatus = orders.map(order => (order.split(“,”)(3), 1)).
+                         reduceByKey((total, element) => total + element)
+orderCountByStatus.map(rec => rec._1 + rec._2).saveAsTextFile(“/user/vvardhan/order_count_by_status”)
+
+//Using Compression
+orderCountByStatus.saveAsTextFile(“/user/vvardhan/order_count_by_status_snappy”,
+  classof[org.apache.hadoop.io.compress.snappyCodec])
+
+//verify
+hadoop fs -ls /user/dgadiraju/order_count_by_status_snappy
+
+//Plain text format.
+sc.textFile(“/user/vvardhan/order_count_by_status_snappy”)collect.foreach(println)
+
+Note:
+  In core-site.xml file. (/etc/hadoop/conf)
+  You can find what kind of compression formats are supported.
+
+//Saving Data in different file formats.
+Supported file formats.
+
+- orc
+- json
+- parquet
+- avrò (with databricks plugin)
+
+Steps to save into different file formats
+
+- Make sure data is represented as Data frame
+- Use written or save API to save Data Frame into different file formats.
+- Use compression algorithm if required.
+
+//Reading JSON file formats.
+//Json files are under this location on the lab
+//You can download from github as well and copy to HDFS
+hadoop fs -ls /public/retail_db_json/orders
+
+sqlContext.read.json.read(“/public/retail_db_json/orders”).show
+sqlContext.read.json.load(“/public/retail_db_json/orders”, “json”).show
+
+//Write data into different file formats
+
+//Read JSon
+val ordersDF = sqlContext.read.json("/public/retail_db_json/orders")
+
+//save
+ordersDF.save("/user/vvardhan/orders_parquet", "parquet")
+********************************************************************************************^^^^^^^^^^^^^
+//Load  Json (saving)
+ sqlContext.load("/user/vvardhan/orders_parquet", "parquet").show
+
+//Write (save only into required data format)
+ordersDF.write.orc(“/user/vvardhan/orders_orc”);
+
+********************************************************************************************^^^^^^^^^^^^^
+//Preview
+sqlContext.load.(“/user/vvardhan/orders_orc”, “orc”).show
+sqlContext.read.orc(“/user/vvardhan/orders_orc”).show
