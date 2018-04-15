@@ -1,0 +1,24 @@
+- Hive was created to make it possible for analysts with strong SQL skills (but meager JAVA skills ) to run queries on huge volume of data that is stored in HDFS.
+- Hive runs on your workstation  and converts your SQL queries into a series of jobs for execution on a Hadoop cluster.
+- Hive organizes data into tables, which provides a means for attaching structure to data stored in HDFS.
+- Hive is a successful  Apache Java Project used by many organizations as a general purpose project, scalable data processing unit.
+- Metadata - such as table schemas - is stored in a database called the Metastore.
+- The database stores its files in a directory called metastore_db, which is relative to the location from which you ran the hive command.
+-  It is the ability to execute SQL data against the raw data that gives the HIVE its power.
+
+COMMANDS
+  Related to configurations
+ show tables
+ hive -f script.q  (to run the commands in specified script) (to run HIVE shell in non-interactive mode )
+ hive -e 'Select * from dummy' (for inline command )(for short scripts)
+ hive -S -e  'Select * from dummy' (suppress the standard output, usually its default to standard output)
+ hive --config /users/tom/dev/hive-conf (to override the configuration directory that hive looks for in a hive-site.xml)
+ hive -hiveconf (set the properties per session basis)
+    ex:  hive -hiveconf fs.defaultFS=hdfs:localhost \
+ hive set property_name (to know a property value) s
+ hive set property_name=value (to set a property value)
+
+ hive set (will list all the properties values set by the hive)
+ hive set -v (to list all the properties in the system , including hadoop default files)
+
+ hive --service -hiveserver2 ( to run hive as server)
